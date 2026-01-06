@@ -1,0 +1,37 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+.out/
+.next/
+
+# Env
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/*.db-journal
+
+# Electron / Expo
+frontend/.expo/
+frontend/.electron/
+frontend/dist/
+frontend/build/
+frontend/.expo-shared/

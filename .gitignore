@@ -22,12 +22,12 @@ logs/
 Thumbs.db
 
 # IDE
-.vscode/
 .idea/
 
 # Prisma
 backend/prisma/dev.db
 backend/prisma/*.db-journal
+backend/prisma/migrations/
 
 # Electron / Expo
 frontend/.expo/

@@ -1,0 +1,55 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  timezone     String?
+
+  tasks         Task[]
+  notifications Notification[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime
+  done        Boolean  @default(false)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  notifications Notification[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+
+  title     String
+  body      String?
+  sendAt    DateTime
+  sent      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

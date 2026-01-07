@@ -73,7 +73,7 @@ export default function TasksScreen() {
     try {
       setIsUsingAI(true)
       const enhancedText = await enhanceTextWithPerplexity(aiText)
-      
+
       const response = await api.post<{ tasks: Task[] }>('/ai/create', {
         text: enhancedText,
       })
@@ -136,7 +136,6 @@ export default function TasksScreen() {
 
       <main className="tasks-main">
         <div className="tasks-container">
-          {/* Seção de criar tarefa manual */}
           <section className="create-task-section">
             <div className="section-header">
               <h2>Criar Tarefa</h2>
@@ -178,7 +177,6 @@ export default function TasksScreen() {
             </form>
           </section>
 
-          {/* Seção de criar tarefas com IA */}
           <section className="ai-section">
             <div className="section-header">
               <h2>✨ Melhorar com IA</h2>
@@ -206,7 +204,6 @@ export default function TasksScreen() {
 
           {error && <div className="error-message">{error}</div>}
 
-          {/* Lista de tarefas */}
           {loading ? (
             <div className="loading">Carregando tarefas...</div>
           ) : (

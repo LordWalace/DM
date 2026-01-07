@@ -2,33 +2,31 @@ export interface User {
   id: string
   email: string
   name: string
-  timezone: string
   createdAt: string
-  updatedAt: string
 }
 
 export interface Task {
   id: string
   title: string
+  description?: string
   date: string
   done: boolean
   userId: string
   createdAt: string
-  updatedAt: string
-}
-
-export interface LoginResponse {
-  accessToken: string
-  user: User
 }
 
 export interface CreateTaskDto {
   title: string
+  description?: string
   date: string
 }
 
-export interface UpdateTaskDto {
-  title?: string
-  date?: string
-  done?: boolean
+export interface LoginResponse {
+  user: User
+  token: string
+}
+
+export interface RegisterResponse {
+  user: User
+  token: string
 }

@@ -1,13 +1,11 @@
-// src/modules/ai/ai.module.ts
-import { Module } from '@nestjs/common';
-import { AiService } from './ai.service';
-import { AiController } from './ai.controller';
-import { PrismaModule } from '../../config/prisma.module';
+import { Module } from '@nestjs/common'
+import { AiController } from './ai.controller'
+import { AiService } from './ai.service'
+import { PrismaService } from '../../database/prisma.service'
 
 @Module({
-  imports: [PrismaModule], // Importa o PrismaModule para acesso ao banco
   controllers: [AiController],
-  providers: [AiService],
-  exports: [AiService], // Permite que outros módulos usem o AiService
+  providers: [AiService, PrismaService],
+  exports: [AiService],
 })
 export class AiModule {}

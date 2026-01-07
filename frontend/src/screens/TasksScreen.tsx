@@ -5,11 +5,11 @@ import { Task, CreateTaskDto } from '../services/types'
 import './TasksScreen.css'
 
 export default function TasksScreen() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [newTask, setNewTask] = useState({ title: '', date: '' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', date: '' })
   const [aiText, setAiText] = useState('')
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [isUsingAI, setIsUsingAI] = useState(false)
@@ -40,16 +40,29 @@ export default function TasksScreen() {
       setIsCreatingTask(true)
       const dto: CreateTaskDto = {
         title: newTask.title,
+        description: newTask.description,
         date: newTask.date || new Date().toISOString(),
       }
       const response = await api.post<{ task: Task }>('/tasks', dto)
       setTasks([...tasks, response.data.task])
-      setNewTask({ title: '', date: '' })
+      setNewTask({ title: '', description: '', date: '' })
     } catch (err: any) {
       setError('Erro ao criar tarefa')
       console.error(err)
     } finally {
       setIsCreatingTask(false)
+    }
+  }
+
+  const enhanceTextWithPerplexity = async (text: string): Promise<string> => {
+    try {
+      const response = await api.post<{ enhancedText: string }>('/ai/enhance-text', {
+        text: text,
+      })
+      return response.data.enhancedText
+    } catch (err: any) {
+      console.error('Erro ao melhorar texto com IA:', err)
+      return text
     }
   }
 
@@ -59,8 +72,10 @@ export default function TasksScreen() {
 
     try {
       setIsUsingAI(true)
+      const enhancedText = await enhanceTextWithPerplexity(aiText)
+      
       const response = await api.post<{ tasks: Task[] }>('/ai/create', {
-        text: aiText,
+        text: enhancedText,
       })
       setTasks([...tasks, ...response.data.tasks])
       setAiText('')
@@ -85,7 +100,6 @@ export default function TasksScreen() {
 
   const deleteTask = async (id: string) => {
     if (!confirm('Tem certeza que deseja deletar esta tarefa?')) return
-
     try {
       await api.delete(`/tasks/${id}`)
       setTasks(tasks.filter(t => t.id !== id))
@@ -106,13 +120,14 @@ export default function TasksScreen() {
 
   const pendingTasks = tasks.filter(t => !t.done)
   const completedTasks = tasks.filter(t => t.done)
+  const userName = user?.name || 'Usuário'
 
   return (
     <div className="tasks-screen">
       <header className="tasks-header">
         <div className="header-content">
           <h1>DayMind</h1>
-          <p>Suas tarefas e objetivos</p>
+          <p>Organize suas tarefas diárias, {userName}! ✨</p>
         </div>
         <button className="logout-button" onClick={logout}>
           Sair
@@ -123,23 +138,40 @@ export default function TasksScreen() {
         <div className="tasks-container">
           {/* Seção de criar tarefa manual */}
           <section className="create-task-section">
-            <h2>Criar Tarefa</h2>
+            <div className="section-header">
+              <h2>Criar Tarefa</h2>
+              <p className="section-description">Adicione uma nova tarefa com título e descrição detalhada</p>
+            </div>
             <form onSubmit={createTask} className="task-form">
-              <div className="form-row">
+              <div className="form-group">
                 <input
                   type="text"
                   placeholder="Título da tarefa..."
                   value={newTask.title}
                   onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                   disabled={isCreatingTask}
+                  className="task-input"
                 />
+              </div>
+              <div className="form-group">
+                <textarea
+                  placeholder="Descrição da tarefa (opcional)..."
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  disabled={isCreatingTask}
+                  rows={2}
+                  className="task-textarea"
+                />
+              </div>
+              <div className="form-row">
                 <input
                   type="datetime-local"
                   value={newTask.date}
                   onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
                   disabled={isCreatingTask}
+                  className="task-input"
                 />
-                <button type="submit" disabled={isCreatingTask}>
+                <button type="submit" disabled={isCreatingTask} className="btn-primary">
                   {isCreatingTask ? '...' : '+ Adicionar'}
                 </button>
               </div>
@@ -148,23 +180,27 @@ export default function TasksScreen() {
 
           {/* Seção de criar tarefas com IA */}
           <section className="ai-section">
-            <h2>✨ Criar com IA</h2>
+            <div className="section-header">
+              <h2>✨ Melhorar com IA</h2>
+              <p className="section-description">Descreva suas atividades em linguagem natural e a IA irá melhorar e organizar</p>
+            </div>
             <p className="ai-hint">
-              Exemplo: "às 10 Reunião com time, às 14 Almoço, 15:30 Conferência"
+              Exemplo: "às 10 reunião com time para discutir projeto, às 14 almoço com cliente importante, 15:30 conferência de código"
             </p>
             <form onSubmit={createTaskFromAI} className="ai-form">
-              <div className="form-row">
+              <div className="form-group">
                 <textarea
                   placeholder="Descreva suas atividades em linguagem natural..."
                   value={aiText}
                   onChange={(e) => setAiText(e.target.value)}
                   disabled={isUsingAI}
-                  rows={2}
+                  rows={3}
+                  className="task-textarea"
                 />
-                <button type="submit" disabled={isUsingAI} className="ai-button">
-                  {isUsingAI ? 'Processando...' : '✨ Criar'}
-                </button>
               </div>
+              <button type="submit" disabled={isUsingAI} className="btn-ai">
+                {isUsingAI ? 'Processando com IA...' : '✨ Melhorar e Criar'}
+              </button>
             </form>
           </section>
 
@@ -189,6 +225,7 @@ export default function TasksScreen() {
                         />
                         <div className="task-content">
                           <h3>{task.title}</h3>
+                          {task.description && <p className="task-description">{task.description}</p>}
                           <p className="task-date">{formatDate(task.date)}</p>
                         </div>
                         <button
@@ -218,6 +255,7 @@ export default function TasksScreen() {
                         />
                         <div className="task-content">
                           <h3>{task.title}</h3>
+                          {task.description && <p className="task-description">{task.description}</p>}
                           <p className="task-date">{formatDate(task.date)}</p>
                         </div>
                         <button

@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common'
 import { AiService } from './ai.service'
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTaskFromAiDto } from './dto/create-task-from-ai.dto'
 import { EnhanceTextDto } from './dto/enhance-text.dto'
 

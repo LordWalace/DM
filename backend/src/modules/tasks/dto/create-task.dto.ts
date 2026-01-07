@@ -6,6 +6,10 @@ export class CreateTaskDto {
   @IsNotEmpty()
   title: string;
 
+  @IsString()
+  @IsNotEmpty()
+  description?: string;
+
   @IsDateString()
   @IsNotEmpty()
   date: string; // ISO string

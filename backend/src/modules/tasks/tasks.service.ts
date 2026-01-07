@@ -14,6 +14,7 @@ export class TasksService {
     return this.prisma.task.create({
       data: {
         title: dto.title,
+        description: dto.description || '',
         date: new Date(dto.date),
         userId,
       },

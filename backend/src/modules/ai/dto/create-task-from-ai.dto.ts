@@ -5,4 +5,8 @@ export class CreateTaskFromAiDto {
   @IsNotEmpty()
   @MinLength(1)
   text: string
+
+  @IsString()
+  @IsNotEmpty()
+  description?: string;
 }

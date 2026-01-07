@@ -45,6 +45,8 @@ export default function LoginScreen() {
       const { accessToken } = response.data
       login(accessToken)
     } catch (err: any) {
+            console.error('Erro completo:', err)
+            console.log('Response:', err.response)
       setError(err.response?.data?.message || 'Erro ao autenticar')
     } finally {
       setLoading(false)

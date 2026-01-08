@@ -1,37 +1,59 @@
-.app-container {
-  min-height: 100vh;
+.app-layout {
   display: flex;
-  flex-direction: column;
+  height: 100vh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.theme-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 10px 20px;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  z-index: 1000;
-  transition: all 0.3s ease;
-}
-
-.theme-toggle:hover {
-  background-color: var(--bg-tertiary);
-  transform: translateY(-2px);
-}
-
-.loading {
+.app-main {
+  flex: 1;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  margin-left: 280px;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background-color: var(--bg-primary);
+}
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  font-size: 1.2rem;
-  color: var(--text-secondary);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--bg-secondary);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .app-main {
+    margin-left: 0;
+  }
+
+  .app-content {
+    padding: 1rem;
+  }
 }

@@ -1,0 +1,100 @@
+/* frontend/src/screens/ConfigScreen.css */
+
+.config-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.config-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.config-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.config-select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.config-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.config-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.config-checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+}
+
+.config-toggle-group {
+  display: inline-flex;
+  border-radius: 999px;
+  background-color: var(--bg-tertiary);
+  padding: 0.2rem;
+  gap: 0.25rem;
+}
+
+.config-toggle-btn {
+  border: none;
+  background: none;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-toggle-active {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.config-footer {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* responsivo */
+@media (max-width: 768px) {
+  .config-container {
+    padding: 1.5rem;
+  }
+
+  .config-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

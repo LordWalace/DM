@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { useAuth } from '../store/AuthProvider'
+import { useAuth } from '../store/authProvider'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import './LoginScreen.css'
+import { useTheme } from '../store/ThemeContext'
+
 
 export default function LoginScreen() {
+  const { theme } = useTheme()
   const { login, register } = useAuth()
   const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
@@ -16,6 +19,7 @@ export default function LoginScreen() {
     name: '',
     timezone: 'America/Sao_Paulo',
   })
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target

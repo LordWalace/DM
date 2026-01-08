@@ -1,369 +1,257 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../store/AuthProvider'
-import api from '../services/api'
-import { Task, CreateTaskDto } from '../services/types'
-import './TasksScreen.css'
+import React, { useState, useEffect } from 'react';
+import { useTheme } from '../store/ThemeContext';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
+import Card from '../components/Card';
+import './TasksScreen.css';
 
-export default function TasksScreen() {
-  const { logout, user } = useAuth()
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [newTask, setNewTask] = useState({ title: '', description: '', date: '' })
-  const [aiText, setAiText] = useState('')
-  const [isCreatingTask, setIsCreatingTask] = useState(false)
-  const [isUsingAI, setIsUsingAI] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [isDarkTheme, setIsDarkTheme] = useState(
-    localStorage.getItem('theme') === 'dark'
-  )
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+interface Task {
+  id: string;
+  title: string;
+  datetime: string;
+  completed: boolean;
+  description?: string;
+}
 
-  useEffect(() => {
-    fetchTasks()
-  }, [])
+const TasksScreen: React.FC = () => {
+  const { theme } = useTheme();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('Usuário');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   useEffect(() => {
-    document.documentElement.setAttribute(
-      'data-theme',
-      isDarkTheme ? 'dark' : 'light'
-    )
-    localStorage.setItem('theme', isDarkTheme ? 'dark' : 'light')
-  }, [isDarkTheme])
+    // Simular carregamento de dados do backend
+    fetchUserData();
+    fetchTodayTasks();
+  }, []);
 
-  const fetchTasks = async () => {
+  const fetchUserData = async () => {
     try {
-      setLoading(true)
-      const response = await api.get<Task[]>('/tasks')
-      setTasks(response.data)
-      setError('')
-    } catch (err: any) {
-      setError('Erro ao carregar tarefas')
-      console.error(err)
+      // const response = await fetch('http://localhost:3000/api/users/profile');
+      // const data = await response.json();
+      // setUserName(data.name);
+      setUserName('João Silva'); // Mock data
+    } catch (error) {
+      console.error('Erro ao buscar usuário:', error);
+    }
+  };
+
+  const fetchTodayTasks = async () => {
+    try {
+      setLoading(true);
+      // const response = await fetch('http://localhost:3000/api/tasks/today');
+      // const data = await response.json();
+      // setTasks(data);
+
+      // Mock data para desenvolvimento
+      setTasks([
+        {
+          id: '1',
+          title: 'Reunião com o time',
+          datetime: '09:00',
+          completed: false,
+          description: 'Semanal de planejamento',
+        },
+        {
+          id: '2',
+          title: 'Almoço',
+          datetime: '12:30',
+          completed: false,
+          description: 'Restaurante X',
+        },
+        {
+          id: '3',
+          title: 'Finalizar projeto',
+          datetime: '14:00',
+          completed: true,
+          description: 'Frontend DayMind',
+        },
+        {
+          id: '4',
+          title: 'Reunião com cliente',
+          datetime: '16:00',
+          completed: false,
+          description: 'Apresentação final',
+        },
+      ]);
+    } catch (error) {
+      console.error('Erro ao buscar tarefas:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const createTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTask.title.trim()) return
+  const handleCompleteTask = async (taskId: string) => {
     try {
-      setIsCreatingTask(true)
-      const dto: CreateTaskDto = {
-        title: newTask.title,
-        description: newTask.description,
-        date: newTask.date || new Date().toISOString(),
-      }
-      const response = await api.post<{ task: Task }>('/tasks', dto)
-      setTasks([...tasks, response.data.task])
-      setNewTask({ title: '', description: '', date: '' })
-    } catch (err: any) {
-      setError('Erro ao criar tarefa')
-      console.error(err)
-    } finally {
-      setIsCreatingTask(false)
-    }
-  }
+      // const response = await fetch(`http://localhost:3000/api/tasks/${taskId}/complete`, {
+      //   method: 'PATCH',
+      // });
+      // if (response.ok) {
+      //   setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
+      // }
 
-  const enhanceTextWithPerplexity = async (text: string): Promise<string> => {
+      // Mock update
+      setTasks(
+        tasks.map((t) =>
+          t.id === taskId ? { ...t, completed: !t.completed } : t
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao marcar tarefa como concluída:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
     try {
-      const response = await api.post<{ enhancedText: string }>('/ai/enhance-text', {
-        text: text,
-      })
-      return response.data.enhancedText
-    } catch (err: any) {
-      console.error('Erro ao melhorar texto com IA:', err)
-      return text
+      // const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+      //   method: 'DELETE',
+      // });
+      // if (response.ok) {
+      //   setTasks(tasks.filter(t => t.id !== taskId));
+      // }
+
+      // Mock delete
+      setTasks(tasks.filter((t) => t.id !== taskId));
+    } catch (error) {
+      console.error('Erro ao deletar tarefa:', error);
     }
-  }
+  };
 
-  const createTaskFromAI = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!aiText.trim()) return
-    try {
-      setIsUsingAI(true)
-      const enhancedText = await enhanceTextWithPerplexity(aiText)
-      const response = await api.post<{ tasks: Task[] }>('/ai/create', {
-        text: enhancedText,
-      })
-      setTasks([...tasks, ...response.data.tasks])
-      setAiText('')
-    } catch (err: any) {
-      setError('Erro ao usar IA para criar tarefas')
-      console.error(err)
-    } finally {
-      setIsUsingAI(false)
+  const getFilteredTasks = () => {
+    switch (filter) {
+      case 'pending':
+        return tasks.filter((t) => !t.completed);
+      case 'completed':
+        return tasks.filter((t) => t.completed);
+      default:
+        return tasks;
     }
-  }
+  };
 
-  const toggleTask = async (id: string, done: boolean) => {
-    try {
-      const response = await api.patch<{ task: Task }>(`/tasks/${id}`, {
-        done: !done,
-      })
-      setTasks(tasks.map(t => t.id === id ? response.data.task : t))
-    } catch (err) {
-      setError('Erro ao atualizar tarefa')
-    }
-  }
+  const sortedTasks = getFilteredTasks().sort((a, b) => {
+    const timeA = parseInt(a.datetime.replace(':', ''));
+    const timeB = parseInt(b.datetime.replace(':', ''));
+    return timeA - timeB;
+  });
 
-  const deleteTask = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta tarefa?')) return
-    try {
-      await api.delete(`/tasks/${id}`)
-      setTasks(tasks.filter(t => t.id !== id))
-    } catch (err) {
-      setError('Erro ao deletar tarefa')
-    }
-  }
-
-  const deleteAccount = async () => {
-    try {
-      setIsDeleting(true)
-      await api.delete('/auth/account')
-      logout()
-    } catch (err: any) {
-      setError('Erro ao deletar conta')
-      console.error(err)
-    } finally {
-      setIsDeleting(false)
-      setShowDeleteConfirm(false)
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
-  const pendingTasks = tasks.filter(t => !t.done)
-  const completedTasks = tasks.filter(t => t.done)
-  const userName = user?.name || 'Usuário'
+  const today = new Date();
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   return (
-    <div className="tasks-screen">
-      <header className="tasks-header">
-        <div className="header-content">
-          <h1>DayMind</h1>
-          <p>Organize suas tarefas diárias, {userName}! ✨</p>
-        </div>
-        <div className="header-actions">
-          <button
-            className="settings-button"
-            onClick={() => setShowSettings(!showSettings)}
-            title="Configurações"
-          >
-            ⚙️
-          </button>
-          {showSettings && (
-            <div className="settings-menu">
-              <button
-                className="settings-menu-item"
-                onClick={() => {
-                  setIsDarkTheme(!isDarkTheme)
-                  setShowSettings(false)
-                }}
-                title={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              >
-                {isDarkTheme ? '☀️' : '🌙'}
-              </button>
-              <button
-                className="settings-menu-item"
-                onClick={() => {
-                  logout()
-                  setShowSettings(false)
-                }}
-              >
-                🚪 Sair
-              </button>
-              <button
-                className="settings-menu-item danger"
-                onClick={() => {
-                  setShowDeleteConfirm(true)
-                  setShowSettings(false)
-                }}
-              >
-                🗑️ Deletar Conta
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {showDeleteConfirm && (
-        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Deletar Conta</h2>
-            <p>Tem certeza que deseja deletar sua conta? Esta ação é irreversível.</p>
-            <div className="modal-actions">
-              <button
-                className="btn-cancel"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-danger"
-                onClick={deleteAccount}
-                disabled={isDeleting}
-              >
-                {isDeleting ? 'Deletando...' : 'Deletar Conta'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="tasks-main">
+    <div className={`tasks-screen ${theme}`}>
+      <Sidebar />
+      <div className="tasks-main">
+        <Header />
         <div className="tasks-container">
-          <section className="create-task-section">
-            <div className="section-header">
-              <h2>Criar Tarefa</h2>
-              <p className="section-description">Adicione uma nova tarefa com título e descrição detalhada</p>
-            </div>
-            <form onSubmit={createTask} className="task-form">
-              <div className="form-group">
-                <input
-                  type="text"
-                  placeholder="Título da tarefa..."
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  disabled={isCreatingTask}
-                  className="task-input"
-                />
-              </div>
-              <div className="form-group">
-                <textarea
-                  placeholder="Descrição da tarefa (opcional)..."
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  disabled={isCreatingTask}
-                  rows={2}
-                  className="task-textarea"
-                />
-              </div>
-              <div className="form-row">
-                <input
-                  type="datetime-local"
-                  value={newTask.date}
-                  onChange={(e) => setNewTask({ ...newTask, date: e.target.value })}
-                  disabled={isCreatingTask}
-                  className="task-input"
-                />
-                <button type="submit" disabled={isCreatingTask} className="btn-primary">
-                  {isCreatingTask ? '...' : '+ Adicionar'}
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section className="ai-section">
-            <div className="section-header">
-              <h2>✨ Melhorar com IA</h2>
-              <p className="section-description">Descreva suas atividades em linguagem natural e a IA irá melhorar e organizar</p>
-            </div>
-            <p className="ai-hint">
-              Exemplo: "às 10 reunião com time para discutir projeto, às 14 almoço com cliente importante, 15:30 conferência de código"
+          {/* Saudação */}
+          <section className="greeting-section">
+            <h1>Olá, {userName}! 👋</h1>
+            <p className="current-date">
+              {dateFormatter.format(today).charAt(0).toUpperCase() +
+                dateFormatter.format(today).slice(1)}
             </p>
-            <form onSubmit={createTaskFromAI} className="ai-form">
-              <div className="form-group">
-                <textarea
-                  placeholder="Descreva suas atividades em linguagem natural..."
-                  value={aiText}
-                  onChange={(e) => setAiText(e.target.value)}
-                  disabled={isUsingAI}
-                  rows={3}
-                  className="task-textarea"
-                />
-              </div>
-              <button type="submit" disabled={isUsingAI} className="btn-ai">
-                {isUsingAI ? 'Processando com IA...' : '✨ Melhorar e Criar'}
-              </button>
-            </form>
           </section>
 
-          {error && <div className="error-message">{error}</div>}
+          {/* Botões de ação */}
+          <section className="action-buttons">
+            <button className="btn btn-primary" title="Nova atividade">
+              ➕ Nova atividade
+            </button>
+            <button className="btn btn-secondary" title="Falar">
+              🎤 Falar
+            </button>
+            <button className="btn btn-secondary" title="IA">
+              🧠 IA
+            </button>
+          </section>
 
-          {loading ? (
-            <div className="loading">Carregando tarefas...</div>
-          ) : (
-            <>
-              {pendingTasks.length > 0 && (
-                <section className="tasks-list-section">
-                  <h2>Pendentes ({pendingTasks.length})</h2>
-                  <div className="tasks-list">
-                    {pendingTasks.map((task) => (
-                      <div key={task.id} className="task-item">
-                        <input
-                          type="checkbox"
-                          checked={task.done}
-                          onChange={() => toggleTask(task.id, task.done)}
-                          className="task-checkbox"
-                        />
-                        <div className="task-content">
-                          <h3>{task.title}</h3>
-                          {task.description && <p className="task-description">{task.description}</p>}
-                          <p className="task-date">{formatDate(task.date)}</p>
-                        </div>
-                        <button
-                          className="delete-button"
-                          onClick={() => deleteTask(task.id)}
-                          title="Deletar"
-                        >
-                          🗑️
-                        </button>
+          {/* Filtros */}
+          <section className="filter-section">
+            <button
+              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
+              onClick={() => setFilter('all')}
+            >
+              Todas ({tasks.length})
+            </button>
+            <button
+              className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
+              onClick={() => setFilter('pending')}
+            >
+              Pendentes ({tasks.filter((t) => !t.completed).length})
+            </button>
+            <button
+              className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
+              onClick={() => setFilter('completed')}
+            >
+              Concluídas ({tasks.filter((t) => t.completed).length})
+            </button>
+          </section>
+
+          {/* Lista de tarefas */}
+          <section className="tasks-list-section">
+            {loading ? (
+              <div className="loading-spinner">Carregando tarefas...</div>
+            ) : sortedTasks.length === 0 ? (
+              <div className="empty-state">
+                <p>📭 Nenhuma tarefa {filter !== 'all' ? `${filter}` : ''}.</p>
+                <button className="btn btn-primary">Criar primeira tarefa</button>
+              </div>
+            ) : (
+              <div className="tasks-grid">
+                {sortedTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className={`task-card ${
+                      task.completed ? 'completed' : 'pending'
+                    }`}
+                  >
+                    <div className="task-header">
+                      <div>
+                        <h3 className={task.completed ? 'strike' : ''}>
+                          {task.title}
+                        </h3>
+                        {task.description && (
+                          <p className="task-description">{task.description}</p>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {completedTasks.length > 0 && (
-                <section className="tasks-list-section completed">
-                  <h2>Concluídas ({completedTasks.length})</h2>
-                  <div className="tasks-list">
-                    {completedTasks.map((task) => (
-                      <div key={task.id} className="task-item completed">
-                        <input
-                          type="checkbox"
-                          checked={task.done}
-                          onChange={() => toggleTask(task.id, task.done)}
-                          className="task-checkbox"
-                        />
-                        <div className="task-content">
-                          <h3>{task.title}</h3>
-                          {task.description && <p className="task-description">{task.description}</p>}
-                          <p className="task-date">{formatDate(task.date)}</p>
-                        </div>
-                        <button
-                          className="delete-button"
-                          onClick={() => deleteTask(task.id)}
-                          title="Deletar"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {tasks.length === 0 && !loading && (
-                <div className="empty-state">
-                  <p>Nenhuma tarefa ainda. Crie sua primeira tarefa! 🚀</p>
-                </div>
-              )}
-            </>
-          )}
+                      <span className="task-time">⏰ {task.datetime}</span>
+                    </div>
+                    <div className="task-actions">
+                      <button
+                        className={`btn-check ${
+                          task.completed ? 'checked' : ''
+                        }`}
+                        onClick={() => handleCompleteTask(task.id)}
+                        title={
+                          task.completed
+                            ? 'Marcar como pendente'
+                            : 'Marcar como concluída'
+                        }
+                      >
+                        {task.completed ? '✅' : '☐'}
+                      </button>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteTask(task.id)}
+                        title="Deletar tarefa"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      </main>
+      </div>
     </div>
-  )
-}
+  );
+};
+
+export default TasksScreen;

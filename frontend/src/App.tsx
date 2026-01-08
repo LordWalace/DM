@@ -1,46 +1,75 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from './store/AuthProvider'
+// frontend/src/App.tsx
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import LoginScreen from './screens/LoginScreen'
+import { useAuth } from './store/authProvider'
 import TasksScreen from './screens/TasksScreen'
-import './App.css'
+import AIScreen from './screens/AIScreen'
+import NotificationsScreen from './screens/NotificationsScreen'
+import ConfigScreen from './screens/ConfigScreen'
+import Dashboard from './screens/Dashboard'
+import LoginScreen from './screens/LoginScreen' // já existe no seu projeto
 
-function App() {
+function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, loading } = useAuth()
-  const [isDark, setIsDark] = useState(true)
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) setIsDark(savedTheme === 'dark')
-  }, [])
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
-  }, [isDark])
-
-  const toggleTheme = () => setIsDark(!isDark)
 
   if (loading) {
-    return <div className="loading">Carregando...</div>
+    return <div>Carregando...</div>
   }
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
+}
+
+const App: React.FC = () => {
   return (
-    <div className="app-container">
-      <button className="theme-toggle" onClick={toggleTheme}>
-        {isDark ? '☀️' : '🌙'}
-      </button>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/" /> : <LoginScreen />} 
-        />
-        <Route 
-          path="/" 
-          element={isAuthenticated ? <TasksScreen /> : <Navigate to="/login" />} 
-        />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="/login" element={<LoginScreen />} />
+
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/tasks"
+        element={
+          <PrivateRoute>
+            <TasksScreen />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/ai"
+        element={
+          <PrivateRoute>
+            <AIScreen />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <PrivateRoute>
+            <NotificationsScreen />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/config"
+        element={
+          <PrivateRoute>
+            <ConfigScreen />
+          </PrivateRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 

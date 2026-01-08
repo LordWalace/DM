@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../store/authContext'
+import { useAuth } from '../store/AuthProvider'
 import api from '../services/api'
 import { Task, CreateTaskDto } from '../services/types'
 import './TasksScreen.css'
@@ -13,10 +13,24 @@ export default function TasksScreen() {
   const [aiText, setAiText] = useState('')
   const [isCreatingTask, setIsCreatingTask] = useState(false)
   const [isUsingAI, setIsUsingAI] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [isDarkTheme, setIsDarkTheme] = useState(
+    localStorage.getItem('theme') === 'dark'
+  )
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchTasks()
   }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      'data-theme',
+      isDarkTheme ? 'dark' : 'light'
+    )
+    localStorage.setItem('theme', isDarkTheme ? 'dark' : 'light')
+  }, [isDarkTheme])
 
   const fetchTasks = async () => {
     try {
@@ -35,7 +49,6 @@ export default function TasksScreen() {
   const createTask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTask.title.trim()) return
-
     try {
       setIsCreatingTask(true)
       const dto: CreateTaskDto = {
@@ -69,11 +82,9 @@ export default function TasksScreen() {
   const createTaskFromAI = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!aiText.trim()) return
-
     try {
       setIsUsingAI(true)
       const enhancedText = await enhanceTextWithPerplexity(aiText)
-
       const response = await api.post<{ tasks: Task[] }>('/ai/create', {
         text: enhancedText,
       })
@@ -108,6 +119,20 @@ export default function TasksScreen() {
     }
   }
 
+  const deleteAccount = async () => {
+    try {
+      setIsDeleting(true)
+      await api.delete('/auth/account')
+      logout()
+    } catch (err: any) {
+      setError('Erro ao deletar conta')
+      console.error(err)
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -129,10 +154,72 @@ export default function TasksScreen() {
           <h1>DayMind</h1>
           <p>Organize suas tarefas diárias, {userName}! ✨</p>
         </div>
-        <button className="logout-button" onClick={logout}>
-          Sair
-        </button>
+        <div className="header-actions">
+          <button
+            className="settings-button"
+            onClick={() => setShowSettings(!showSettings)}
+            title="Configurações"
+          >
+            ⚙️
+          </button>
+          {showSettings && (
+            <div className="settings-menu">
+              <button
+                className="settings-menu-item"
+                onClick={() => {
+                  setIsDarkTheme(!isDarkTheme)
+                  setShowSettings(false)
+                }}
+                title={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
+              >
+                {isDarkTheme ? '☀️' : '🌙'}
+              </button>
+              <button
+                className="settings-menu-item"
+                onClick={() => {
+                  logout()
+                  setShowSettings(false)
+                }}
+              >
+                🚪 Sair
+              </button>
+              <button
+                className="settings-menu-item danger"
+                onClick={() => {
+                  setShowDeleteConfirm(true)
+                  setShowSettings(false)
+                }}
+              >
+                🗑️ Deletar Conta
+              </button>
+            </div>
+          )}
+        </div>
       </header>
+
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Deletar Conta</h2>
+            <p>Tem certeza que deseja deletar sua conta? Esta ação é irreversível.</p>
+            <div className="modal-actions">
+              <button
+                className="btn-cancel"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-danger"
+                onClick={deleteAccount}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deletando...' : 'Deletar Conta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="tasks-main">
         <div className="tasks-container">

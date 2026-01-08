@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../store/authContext'
+import { useAuth } from '../store/AuthProvider'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import './LoginScreen.css'
@@ -40,7 +40,7 @@ export default function LoginScreen() {
         }
         await register(formData.email, formData.password, formData.name)
       }
-      navigate('/tasks')
+      navigate('/')
     } catch (err: any) {
       setError(err.message || 'Erro ao processar autenticação')
     } finally {

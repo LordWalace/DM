@@ -2,11 +2,13 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common'
 import { PrismaService } from '../../config/prisma.service'
 import axios from 'axios'
 
+
 interface ParsedTask {
   title: string
   date: string
   description?: string
 }
+
 
 interface PerplexityResponse {
   choices: Array<{
@@ -16,12 +18,15 @@ interface PerplexityResponse {
   }>
 }
 
+
 @Injectable()
 export class AiService {
   private readonly perplexityApiKey = process.env.PERPLEXITY_API_KEY
   private readonly perplexityApiUrl = 'https://api.perplexity.ai/chat/completions'
 
+
   constructor(private prisma: PrismaService) {}
+
 
   async criarTarefasComIA(texto: string, userId: string) {
     try {
@@ -31,12 +36,14 @@ export class AiService {
       // Depois, extrair as tarefas do texto melhorado
       const tarefas = this.extractTasksFromText(textoMelhorado)
 
+
       if (!tarefas || tarefas.length === 0) {
         throw new HttpException(
           'Não foi possível extrair tarefas do texto',
           HttpStatus.BAD_REQUEST,
         )
       }
+
 
       const tarefasAdicionadas: any[] = []
       for (const tarefa of tarefas) {
@@ -52,6 +59,7 @@ export class AiService {
         tarefasAdicionadas.push(task)
       }
 
+
       return { tasks: tarefasAdicionadas }
     } catch (error) {
       console.error('Erro ao criar tarefas com IA:', error)
@@ -61,6 +69,7 @@ export class AiService {
       )
     }
   }
+
 
   async melhorarTexto(texto: string): Promise<{ enhancedText: string }> {
     try {
@@ -72,6 +81,7 @@ export class AiService {
     }
   }
 
+
   private async processarTextoComIA(texto: string): Promise<string> {
     try {
       if (!this.perplexityApiKey) {
@@ -79,9 +89,12 @@ export class AiService {
         return this.simpleEnhanceText(texto)
       }
 
+
       const prompt = `Você é um assistente de produtividade. O usuário escreveu as seguintes atividades ou tarefas:
 
+
 "${texto}"
+
 
 Por favor:
 1. Melhore o texto, corrigindo erros gramaticais e ortográficos
@@ -90,17 +103,20 @@ Por favor:
 4. Adicione uma breve descrição se necessário
 5. Preserve os horários se existirem no formato "HH:MM"
 
+
 Formato esperado de resposta (uma tarefa por linha):
 HH:MM título da tarefa
 ou
 título da tarefa
 
+
 Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`
+
 
       const response = await axios.post<PerplexityResponse>(
         this.perplexityApiUrl,
         {
-          model: 'mixtral-8x7b-instruct',
+          model: 'sonar-pro',
           messages: [
             {
               role: 'user',
@@ -118,32 +134,43 @@ Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`
         },
       )
 
+
       if (response.data.choices && response.data.choices.length > 0) {
         return response.data.choices[0].message.content.trim()
       }
 
+
       return this.simpleEnhanceText(texto)
-    } catch (error) {
-      console.error('Erro ao chamar API da Perplexity:', error)
+    } catch (error: any) {
+      console.error('=== ERRO AO CHAMAR API DA PERPLEXITY ===')
+      console.error('Status HTTP:', error.response?.status)
+      console.error('Mensagem de erro:', error.response?.data?.error?.message)
+      console.error('Erro completo:', JSON.stringify(error.response?.data, null, 2))
+      console.error('=========================================')
+      
       // Fallback para processamento local se a API falhar
       return this.simpleEnhanceText(texto)
     }
   }
 
+
   private extractTasksFromText(texto: string): ParsedTask[] {
     const tarefas: ParsedTask[] = []
     const linhas = texto.split('\n').filter(l => l.trim().length > 0)
+
 
     for (const linha of linhas) {
       // Padrão para detectar horários: "HH:MM" ou "H:MM"
       const timePattern = /^(\d{1,2}):(\d{2})\s+(.+)$/
       const match = linha.match(timePattern)
 
+
       if (match) {
         const [, horas, minutos, titulo] = match
         const agora = new Date()
         const data = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
         data.setHours(parseInt(horas), parseInt(minutos), 0)
+
 
         tarefas.push({
           title: titulo.trim(),
@@ -160,8 +187,10 @@ Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`
       }
     }
 
+
     return tarefas.length > 0 ? tarefas : []
   }
+
 
   private simpleEnhanceText(texto: string): string {
     // Processamento local simples como fallback
@@ -179,8 +208,10 @@ Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`
       })
       .join('\n')
 
+
     return melhorado
   }
+
 
   private capitalizarPrimeira(texto: string): string {
     if (!texto || texto.length === 0) return texto

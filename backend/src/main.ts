@@ -12,6 +12,8 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  app.setGlobalPrefix('api');
+
   await app.listen(8000);
   console.log('Servidor rodando em http://localhost:8000');
 }

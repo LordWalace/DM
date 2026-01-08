@@ -1,4 +1,3 @@
-// src/modules/tasks/tasks.controller.ts
 import {
   Controller,
   Get,
@@ -15,6 +14,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
+
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
 export class TasksController {
@@ -27,6 +27,16 @@ export class TasksController {
   ) {
     const task = await this.tasksService.create(user.id, dto);
     return { message: 'Task criada com sucesso', task };
+  }
+
+  // Novo endpoint para criar múltiplas tarefas com IA
+  @Post('ai')
+  async criarComIA(
+    @CurrentUser() user: any,
+    @Body() body: { texto: string },
+  ) {
+    const tasks = await this.tasksService.criarTarefasComIA(user.id, body.texto);
+    return { message: 'Tarefas criadas com sucesso', tasks };
   }
 
   @Get()

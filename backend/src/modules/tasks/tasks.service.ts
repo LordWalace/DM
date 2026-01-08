@@ -1,13 +1,17 @@
-// src/modules/tasks/tasks.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../config/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { Task } from '@prisma/client';
+import { AiService } from '../ai/ai.service'; // Adicione essa importação
+
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiService: AiService, // Injete o AiService
+  ) {}
 
   // Cria uma nova task
   async create(userId: string, dto: CreateTaskDto): Promise<Task> {
@@ -19,6 +23,12 @@ export class TasksService {
         userId,
       },
     });
+  }
+
+  // Cria múltiplas tarefas a partir de um texto
+  async criarTarefasComIA(userId: string, texto: string): Promise<Task[]> {
+    const result = await this.aiService.criarTarefasComIA(texto, userId);
+    return result.tasks;
   }
 
   // Retorna todas as tasks de um usuário

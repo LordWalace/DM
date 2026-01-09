@@ -5,7 +5,9 @@ import {
   Get,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express'; // ✅ Corrigido: importação com 'type'
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -36,18 +38,23 @@ export class AuthController {
   // Google OAuth
   // =======================
 
-  // 1) Redireciona para login do Google
+  // 1) Inicia o fluxo OAuth do Google
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
-    // redirecionamento é feito automaticamente pelo Passport
+    // O Passport redireciona automaticamente para o Google
   }
 
-  // 2) Callback/redirect do Google
-  @Get('google/redirect')
+  // 2) Callback do Google - redireciona para o frontend com token
+  @Get('google/oauth/callback')
   @UseGuards(AuthGuard('google'))
-  async googleRedirect(@Req() req: any) {
+  async googleAuthCallback(@Req() req: any, @Res() res: Response) {
     // req.user vem do validate() da GoogleStrategy
-    return req.user; // { accessToken, user }
+    const { accessToken } = req.user;
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+    // Redireciona para o frontend com o token na URL
+    return res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
   }
 }

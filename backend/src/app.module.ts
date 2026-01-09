@@ -1,5 +1,6 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './config/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -11,6 +12,10 @@ import { GoogleModule } from './modules/google/google.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // Torna as variáveis disponíveis em todos os módulos
+      envFilePath: '.env', 
+    }),
     PrismaModule,
     ScheduleModule.forRoot(),
     UsersModule,

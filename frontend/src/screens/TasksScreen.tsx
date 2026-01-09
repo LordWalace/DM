@@ -1,146 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { useTheme } from '../store/ThemeContext';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
-import Card from '../components/Card';
-import './TasksScreen.css';
-
-interface Task {
-  id: string;
-  title: string;
-  datetime: string;
-  completed: boolean;
-  description?: string;
-}
+import React, { useState, useEffect } from 'react'
+import { useTheme } from '../store/ThemeContext'
+import Header from '../components/Header'
+import Sidebar from '../components/Sidebar'
+import Card from '../components/Card'
+import api from '../services/api'
+import { Task } from '../services/types'
+import './TasksScreen.css'
 
 const TasksScreen: React.FC = () => {
-  const { theme } = useTheme();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState('Usuário');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const { theme } = useTheme()
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userName, setUserName] = useState('Usuário')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all')
 
   useEffect(() => {
-    // Simular carregamento de dados do backend
-    fetchUserData();
-    fetchTodayTasks();
-  }, []);
+    const loadData = async () => {
+      await Promise.all([fetchUserData(), fetchTasks()])
+    }
+    loadData()
+  }, [])
 
   const fetchUserData = async () => {
     try {
-      // const response = await fetch('http://localhost:3000/api/users/profile');
-      // const data = await response.json();
-      // setUserName(data.name);
-      setUserName('João Silva'); // Mock data
+      const response = await api.get('/auth/me')
+      setUserName(response.data.name || 'Usuário')
     } catch (error) {
-      console.error('Erro ao buscar usuário:', error);
+      console.error('Erro ao buscar dados do usuário:', error)
     }
-  };
+  }
 
-  const fetchTodayTasks = async () => {
+  const fetchTasks = async () => {
     try {
-      setLoading(true);
-      // const response = await fetch('http://localhost:3000/api/tasks/today');
-      // const data = await response.json();
-      // setTasks(data);
-
-      // Mock data para desenvolvimento
-      setTasks([
-        {
-          id: '1',
-          title: 'Reunião com o time',
-          datetime: '09:00',
-          completed: false,
-          description: 'Semanal de planejamento',
-        },
-        {
-          id: '2',
-          title: 'Almoço',
-          datetime: '12:30',
-          completed: false,
-          description: 'Restaurante X',
-        },
-        {
-          id: '3',
-          title: 'Finalizar projeto',
-          datetime: '14:00',
-          completed: true,
-          description: 'Frontend DayMind',
-        },
-        {
-          id: '4',
-          title: 'Reunião com cliente',
-          datetime: '16:00',
-          completed: false,
-          description: 'Apresentação final',
-        },
-      ]);
+      setLoading(true)
+      const response = await api.get<Task[]>('/tasks')
+      setTasks(response.data)
     } catch (error) {
-      console.error('Erro ao buscar tarefas:', error);
+      console.error('Erro ao buscar tarefas:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleCompleteTask = async (taskId: string) => {
     try {
-      // const response = await fetch(`http://localhost:3000/api/tasks/${taskId}/complete`, {
-      //   method: 'PATCH',
-      // });
-      // if (response.ok) {
-      //   setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
-      // }
+      const current = tasks.find((t) => t.id === taskId)
+      if (!current) return
 
-      // Mock update
-      setTasks(
-        tasks.map((t) =>
-          t.id === taskId ? { ...t, completed: !t.completed } : t
-        )
-      );
+      const response = await api.patch<Task>(`/tasks/${taskId}`, {
+        done: !current.done,
+      })
+
+      const updated = response.data
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updated.id ? updated : t)),
+      )
     } catch (error) {
-      console.error('Erro ao marcar tarefa como concluída:', error);
+      console.error('Erro ao marcar tarefa como concluída:', error)
     }
-  };
+  }
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      // const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
-      //   method: 'DELETE',
-      // });
-      // if (response.ok) {
-      //   setTasks(tasks.filter(t => t.id !== taskId));
-      // }
-
-      // Mock delete
-      setTasks(tasks.filter((t) => t.id !== taskId));
+      await api.delete(`/tasks/${taskId}`)
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
     } catch (error) {
-      console.error('Erro ao deletar tarefa:', error);
+      console.error('Erro ao deletar tarefa:', error)
     }
-  };
+  }
 
   const getFilteredTasks = () => {
     switch (filter) {
       case 'pending':
-        return tasks.filter((t) => !t.completed);
+        return tasks.filter((t) => !t.done)
       case 'completed':
-        return tasks.filter((t) => t.completed);
+        return tasks.filter((t) => t.done)
       default:
-        return tasks;
+        return tasks
     }
-  };
+  }
 
-  const sortedTasks = getFilteredTasks().sort((a, b) => {
-    const timeA = parseInt(a.datetime.replace(':', ''));
-    const timeB = parseInt(b.datetime.replace(':', ''));
-    return timeA - timeB;
-  });
+  const sortedTasks = getFilteredTasks().sort((a, b) =>
+    a.date.localeCompare(b.date),
+  )
 
-  const today = new Date();
+  const today = new Date()
   const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-  });
+  })
+
+  const formatTimeRange = (task: Task) => {
+    if (task.allDay) return 'Dia todo'
+    const start = new Date(task.date)
+    const startStr = start.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    if (task.endDate) {
+      const end = new Date(task.endDate)
+      const endStr = end.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      return `${startStr} - ${endStr}`
+    }
+    return startStr
+  }
+
+  const getProgress = (task: Task) => {
+    if (task.allDay || !task.endDate) return 0
+    const now = Date.now()
+    const start = new Date(task.date).getTime()
+    const end = new Date(task.endDate).getTime()
+    if (now <= start) return 0
+    if (now >= end) return 100
+    return ((now - start) / (end - start)) * 100
+  }
 
   return (
     <div className={`tasks-screen ${theme}`}>
@@ -148,7 +125,6 @@ const TasksScreen: React.FC = () => {
       <div className="tasks-main">
         <Header />
         <div className="tasks-container">
-          {/* Saudação */}
           <section className="greeting-section">
             <h1>Olá, {userName}! 👋</h1>
             <p className="current-date">
@@ -157,7 +133,6 @@ const TasksScreen: React.FC = () => {
             </p>
           </section>
 
-          {/* Botões de ação */}
           <section className="action-buttons">
             <button className="btn btn-primary" title="Nova atividade">
               ➕ Nova atividade
@@ -170,7 +145,6 @@ const TasksScreen: React.FC = () => {
             </button>
           </section>
 
-          {/* Filtros */}
           <section className="filter-section">
             <button
               className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
@@ -179,27 +153,32 @@ const TasksScreen: React.FC = () => {
               Todas ({tasks.length})
             </button>
             <button
-              className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
+              className={`filter-btn ${
+                filter === 'pending' ? 'active' : ''
+              }`}
               onClick={() => setFilter('pending')}
             >
-              Pendentes ({tasks.filter((t) => !t.completed).length})
+              Pendentes ({tasks.filter((t) => !t.done).length})
             </button>
             <button
-              className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
+              className={`filter-btn ${
+                filter === 'completed' ? 'active' : ''
+              }`}
               onClick={() => setFilter('completed')}
             >
-              Concluídas ({tasks.filter((t) => t.completed).length})
+              Concluídas ({tasks.filter((t) => t.done).length})
             </button>
           </section>
 
-          {/* Lista de tarefas */}
           <section className="tasks-list-section">
             {loading ? (
               <div className="loading-spinner">Carregando tarefas...</div>
             ) : sortedTasks.length === 0 ? (
               <div className="empty-state">
                 <p>📭 Nenhuma tarefa {filter !== 'all' ? `${filter}` : ''}.</p>
-                <button className="btn btn-primary">Criar primeira tarefa</button>
+                <button className="btn btn-primary">
+                  Criar primeira atividade
+                </button>
               </div>
             ) : (
               <div className="tasks-grid">
@@ -207,38 +186,50 @@ const TasksScreen: React.FC = () => {
                   <Card
                     key={task.id}
                     className={`task-card ${
-                      task.completed ? 'completed' : 'pending'
+                      task.done ? 'completed' : 'pending'
                     }`}
                   >
                     <div className="task-header">
                       <div>
-                        <h3 className={task.completed ? 'strike' : ''}>
+                        <h3 className={task.done ? 'strike' : ''}>
                           {task.title}
                         </h3>
                         {task.description && (
-                          <p className="task-description">{task.description}</p>
+                          <p className="task-description">
+                            {task.description}
+                          </p>
                         )}
                       </div>
-                      <span className="task-time">⏰ {task.datetime}</span>
+                      <span className="task-time">
+                        ⏰ {formatTimeRange(task)}
+                      </span>
                     </div>
+
+                    {!task.allDay && task.endDate && (
+                      <div className="task-progress-bar">
+                        <div
+                          className="task-progress-fill"
+                          style={{ width: `${getProgress(task)}%` }}
+                        />
+                      </div>
+                    )}
+
                     <div className="task-actions">
                       <button
-                        className={`btn-check ${
-                          task.completed ? 'checked' : ''
-                        }`}
+                        className={`btn-check ${task.done ? 'checked' : ''}`}
                         onClick={() => handleCompleteTask(task.id)}
                         title={
-                          task.completed
+                          task.done
                             ? 'Marcar como pendente'
                             : 'Marcar como concluída'
                         }
                       >
-                        {task.completed ? '✅' : '☐'}
+                        {task.done ? '✅' : '☐'}
                       </button>
                       <button
                         className="btn-delete"
                         onClick={() => handleDeleteTask(task.id)}
-                        title="Deletar tarefa"
+                        title="Deletar atividade"
                       >
                         🗑️
                       </button>
@@ -251,7 +242,7 @@ const TasksScreen: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TasksScreen;
+export default TasksScreen

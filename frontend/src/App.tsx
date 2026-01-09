@@ -1,4 +1,3 @@
-// frontend/src/App.tsx
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './store/authProvider'
@@ -7,7 +6,8 @@ import AIScreen from './screens/AIScreen'
 import NotificationsScreen from './screens/NotificationsScreen'
 import ConfigScreen from './screens/ConfigScreen'
 import Dashboard from './screens/Dashboard'
-import LoginScreen from './screens/LoginScreen' // já existe no seu projeto
+import LoginScreen from './screens/LoginScreen'
+import AuthCallback from './screens/AuthCallback'
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, loading } = useAuth()
@@ -27,6 +27,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       <Route
         path="/"

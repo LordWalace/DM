@@ -1,5 +1,8 @@
+/* frontend/src/components/Sidebar.css */
+
+/* Botão sempre visível (desktop e mobile) */
 .sidebar-toggle {
-  display: none;
+  display: block;
   position: fixed;
   top: 20px;
   left: 20px;
@@ -17,6 +20,7 @@
   background-color: var(--bg-secondary);
 }
 
+/* Sidebar base: sempre escondida por padrão */
 .sidebar {
   position: fixed;
   left: 0;
@@ -29,20 +33,28 @@
   border-right: 1px solid rgba(0, 0, 0, 0.1);
   z-index: 1000;
   overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+/* Quando aberta (desktop e mobile) */
+.sidebar.sidebar-open {
+  transform: translateX(0);
 }
 
 [data-theme='dark'] .sidebar {
   border-right-color: rgba(124, 58, 237, 0.1);
 }
 
+/* Overlay: visível quando isOpen = true */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 999;
-  display: none;
 }
 
+/* Logo */
 .sidebar-logo {
   padding: 2rem 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -59,10 +71,11 @@
 .sidebar-logo h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: var(--color-primary);
+  color: var(--primary);
   font-weight: 700;
 }
 
+/* Navegação */
 .sidebar-nav {
   flex: 1;
   padding: 1rem 0;
@@ -89,18 +102,21 @@
 }
 
 .sidebar-item:hover {
-  color: var(--color-primary);
+  color: var(--primary);
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-[data-theme='dark'] .sidebar-item:hover {
-  background-color: rgba(124, 58, 237, 0.1);
+.sidebar-item.active {
+  color: var(--primary);
+  background-color: var(--bg-tertiary);
+  font-weight: 600;
 }
 
 [data-theme='dark'] .sidebar-item:hover {
   background-color: rgba(124, 58, 237, 0.15);
 }
 
+/* Footer (Sair) */
 .sidebar-footer {
   padding: 1.5rem 1.25rem;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -131,25 +147,31 @@
   color: var(--primary);
 }
 
-/* Responsivo: sidebar vira menu */
-@media (max-width: 768px) {
-  .sidebar-toggle {
-    display: block;
+/* Empurrar conteúdo para o lado quando sidebar aberta (desktop) */
+@media (min-width: 769px) {
+  .tasks-screen {
+    display: flex;
+    height: 100vh;
   }
 
+  .tasks-main {
+    flex: 1;
+    transition: margin-left 0.3s ease;
+    margin-left: 0;
+  }
+
+  .sidebar.sidebar-open ~ .tasks-main {
+    margin-left: 280px;
+  }
+}
+
+/* Mobile: sidebar como overlay por cima */
+@media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   }
 
-  .sidebar.sidebar-open {
-    transform: translateX(0);
+  .tasks-main {
+    padding-top: 56px;
   }
-
-  .sidebar-overlay {
-    display: block;
-  }
-}
-  .header-right {
-    gap: 0.5rem;
 }

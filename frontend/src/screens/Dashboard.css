@@ -9,12 +9,14 @@
   gap: 2rem;
 }
 
+/* Grid de cards de resumo */
 .dashboard-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.25rem;
 }
 
+/* Próximas atividades */
 .dashboard-next-section {
   display: flex;
   flex-direction: column;
@@ -37,11 +39,27 @@
   cursor: default;
 }
 
-/* reaproveita .greeting-section e tipografia do TasksScreen */
-
-/* responsivo */
-@media (max-width: 768px) {
+/* Ajustes para telas menores */
+@media (max-width: 1024px) {
   .dashboard-container {
     padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1.25rem;
+  }
+
+  .dashboard-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-next-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .greeting-section h1 {
+    font-size: 1.8rem;
   }
 }

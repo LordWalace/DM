@@ -14,28 +14,37 @@ model User {
   name         String?
   timezone     String?
 
+  // Integração Google
+  googleRefreshToken String?
+  googleCalendarId   String?
+
   tasks         Task[]
   notifications Notification[]
+  subscriptions NotificationSubscription[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
 
 model Task {
-  id        String   @id @default(uuid())
-  title     String
-  description String? 
-  date      DateTime
-  done      Boolean  @default(false)
-  userId    String
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
   
-  user      User     @relation(fields: [userId], references: [id])
-  notifications Notification[]
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  endDate         DateTime?   
+  allDay          Boolean     @default(false) // tarefa de dia todo
+  durationMinutes Int?        
 
+  done        Boolean  @default(false)
+  userId      String
+
+  user         User        @relation(fields: [userId], references: [id])
+  notifications Notification[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
 model Notification {
   id        String   @id @default(uuid())
@@ -53,4 +62,18 @@ model Notification {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model NotificationSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  platform  String   // 'web', 'android', 'ios', 'desktop'
+  token     String   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

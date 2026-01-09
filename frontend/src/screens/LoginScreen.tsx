@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../store/authProvider'
 import { useNavigate } from 'react-router-dom'
-import api from '../services/api'
 import './LoginScreen.css'
 import { useTheme } from '../store/ThemeContext'
-
 
 export default function LoginScreen() {
   const { theme } = useTheme()
@@ -20,10 +18,11 @@ export default function LoginScreen() {
     timezone: 'America/Sao_Paulo',
   })
 
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,10 +32,8 @@ export default function LoginScreen() {
 
     try {
       if (isLogin) {
-        // Login com email e senha
         await login(formData.email, formData.password)
       } else {
-        // Registro com email, senha e nome
         if (!formData.name.trim()) {
           setError('Nome é obrigatório')
           setLoading(false)
@@ -50,6 +47,12 @@ export default function LoginScreen() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${
+      import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+    }/auth/google`
   }
 
   return (
@@ -136,6 +139,17 @@ export default function LoginScreen() {
             >
               {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar Conta'}
             </button>
+
+            {isLogin && (
+              <button
+                type="button"
+                className="google-button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+              >
+                Entrar com Google
+              </button>
+            )}
           </form>
 
           <div className="toggle-auth">

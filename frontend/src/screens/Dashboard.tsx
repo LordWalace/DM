@@ -1,4 +1,3 @@
-// frontend/src/screens/Dashboard.tsx
 import React, { useEffect, useState } from 'react'
 import { useTheme } from '../store/ThemeContext'
 import { useAuth } from '../store/authProvider'
@@ -27,7 +26,14 @@ const Dashboard: React.FC = () => {
   })
   const [aiCount, setAiCount] = useState(0)
   const [nextItems, setNextItems] = useState<
-    { id: string; title: string; datetime: string; description?: string }[]
+    {
+      id: string
+      title: string
+      datetime: string
+      endDate?: string | null
+      allDay: boolean
+      description?: string
+    }[]
   >([])
 
   useEffect(() => {
@@ -41,7 +47,7 @@ const Dashboard: React.FC = () => {
         const pending = total - completed
 
         const todayIso = new Date().toISOString().slice(0, 10)
-        const today = all.filter((t) => t.date?.startsWith(todayIso)).length
+        const today = all.filter((t) => t.date.startsWith(todayIso)).length
 
         setSummary({
           total,
@@ -50,20 +56,19 @@ const Dashboard: React.FC = () => {
           today,
         })
 
-        const sorted = [...all].sort((a, b) =>
-          (a.date || '').localeCompare(b.date || ''),
-        )
+        const sorted = [...all].sort((a, b) => a.date.localeCompare(b.date))
 
         setNextItems(
           sorted.slice(0, 3).map((t) => ({
             id: t.id,
             title: t.title,
-            datetime: t.date || '',
-            description: t.description,
+            datetime: t.date,
+            endDate: t.endDate ?? undefined,
+            allDay: t.allDay,
+            description: t.description ?? undefined,
           })),
         )
 
-        // Se você criar um endpoint /ai/metrics, pode trocar isso:
         setAiCount(0)
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error)
@@ -74,6 +79,30 @@ const Dashboard: React.FC = () => {
   }, [])
 
   const firstName = user?.name?.split(' ')[0] || 'Usuário'
+
+  const formatRange = (
+    startIso: string,
+    endIso?: string | null,
+    allDay?: boolean,
+  ) => {
+    if (allDay) return 'Dia todo'
+    const start = new Date(startIso)
+    const startStr = start.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    if (endIso) {
+      const end = new Date(endIso)
+      const endStr = end.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      return `${startStr} - ${endStr}`
+    }
+    return startStr
+  }
 
   return (
     <div className={`tasks-screen ${theme}`}>
@@ -121,8 +150,8 @@ const Dashboard: React.FC = () => {
               icon={<span>✅</span>}
             >
               <p>
-                Você já concluiu <strong>{summary.completed}</strong>{' '}
-                atividades recentemente.
+                Você já concluiu <strong>{summary.completed}</strong> atividades
+                recentemente.
               </p>
             </Card>
 
@@ -133,8 +162,7 @@ const Dashboard: React.FC = () => {
               icon={<span>🧠</span>}
             >
               <p>
-                A IA ajuda você a transformar pensamentos em ações
-                estruturadas.
+                A IA ajuda você a transformar pensamentos em ações estruturadas.
               </p>
             </Card>
           </section>
@@ -146,7 +174,11 @@ const Dashboard: React.FC = () => {
                 <Card
                   key={item.id}
                   title={item.title}
-                  subtitle={item.datetime}
+                  subtitle={formatRange(
+                    item.datetime,
+                    item.endDate,
+                    item.allDay,
+                  )}
                   icon={<span>🕒</span>}
                   className="dashboard-next-card"
                 >

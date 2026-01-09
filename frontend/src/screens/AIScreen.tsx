@@ -30,8 +30,7 @@ const AIScreen: React.FC = () => {
     setError(null)
     try {
       const response = await api.post('/ai/create', { text: input })
-      // Ajuste aqui conforme o que seu backend devolve:
-      // por exemplo: { message: string, tasks: Task[] }
+
       const now = new Date().toLocaleTimeString('pt-BR', {
         hour: '2-digit',
         minute: '2-digit',
@@ -51,23 +50,53 @@ const AIScreen: React.FC = () => {
       ])
 
       setInput('')
-    } catch (e) {
-      setError('Erro ao conversar com a IA. Tente novamente.')
-      console.error(e)
+    } catch (e: any) {
+      console.error('Erro ao chamar /ai/create:', e.response?.data || e)
+      setError(
+        e.response?.data?.message ||
+          'Erro ao conversar com a IA. Tente novamente.',
+      )
     } finally {
       setLoading(false)
     }
   }
 
   const handleStartListening = () => {
-    // Aqui você pode integrar Web Speech API depois
-    setIsListening(true)
-    setTimeout(() => {
-      setInput(
-        'Quero acordar às 7, estudar DayMind à tarde e ter tempo pra lazer à noite.',
-      )
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      setError('Seu navegador não suporta reconhecimento de voz.')
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'pt-BR'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      setError(null)
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error('Erro no reconhecimento:', event.error)
+      setError('Erro no reconhecimento de voz. Tente novamente.')
       setIsListening(false)
-    }, 2000)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInput((prev) => (prev ? prev + ' ' + transcript : transcript))
+    }
+
+    recognition.start()
   }
 
   const firstName = user?.name?.split(' ')[0] || 'Usuário'

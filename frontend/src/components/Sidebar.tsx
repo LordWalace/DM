@@ -1,3 +1,4 @@
+// frontend/src/components/Sidebar.tsx
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../store/authProvider'
@@ -30,6 +31,11 @@ export function Sidebar() {
 
   const isActive = (path: string) => location.pathname === path
 
+  const handleNavigate = (path: string) => {
+    navigate(path)
+    setIsOpen(false)
+  }
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -38,14 +44,16 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Botão sempre visível */}
       <button
         className="sidebar-toggle"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Menu"
       >
         {isOpen ? <MdClose size={24} /> : <MdMenu size={24} />}
       </button>
 
+      {/* Overlay: fecha ao clicar fora */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -58,13 +66,8 @@ export function Sidebar() {
         )}
       </AnimatePresence>
 
-      <motion.aside
-        className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}
-        initial={{ x: -300 }}
-        animate={{ x: isOpen ? 0 : -300 }}
-        exit={{ x: -300 }}
-        transition={{ duration: 0.3 }}
-      >
+      {/* Sidebar */}
+      <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
           <span>🧠</span>
           <h2>DayMind</h2>
@@ -74,11 +77,10 @@ export function Sidebar() {
           {menuItems.map((item) => (
             <motion.button
               key={item.path}
-              className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
-              onClick={() => {
-                navigate(item.path)
-                setIsOpen(false)
-              }}
+              className={`sidebar-item ${
+                isActive(item.path) ? 'active' : ''
+              }`}
+              onClick={() => handleNavigate(item.path)}
               whileHover={{ x: 8 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -94,7 +96,7 @@ export function Sidebar() {
             <span>Sair</span>
           </button>
         </div>
-      </motion.aside>
+      </aside>
     </>
   )
 }

@@ -7,12 +7,14 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { AiModule } from './modules/ai/ai.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { GoogleModule } from './modules/google/google.module';
 
 @Module({
   imports: [
     PrismaModule,
     ScheduleModule.forRoot(),
     UsersModule,
+    GoogleModule,
     AuthModule,
     TasksModule,
     AiModule,

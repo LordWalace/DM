@@ -8,6 +8,13 @@ interface ParsedTask {
   description?: string;
 }
 
+interface InfoTempoTarefa {
+  tipo: 'horario' | 'turno' | 'dia_todo';
+  horaInicio?: string; // HH:MM
+  duracaoMinutos?: number; // em minutos
+  allDay: boolean;
+}
+
 @Injectable()
 export class AiService {
   constructor(
@@ -15,13 +22,15 @@ export class AiService {
     private huggingfaceClient: HuggingFaceClient,
   ) {}
 
+  // PÚBLICOS
+  
   async criarTarefasComIA(texto: string, userId: string) {
     try {
-      // Processar texto com HuggingFace
-      const textosProcessado = await this.processarTextoComIA(texto);
+      // 1) Processar texto com IA
+      const textoProcessado = await this.processarTextoComIA(texto);
 
-      // Extrair tarefas do texto processado
-      const tarefas = this.extractTasksFromText(textosProcessado);
+      // 2) Extrair tarefas
+      const tarefas = this.extractTasksFromText(textoProcessado, texto);
 
       if (!tarefas || tarefas.length === 0) {
         throw new HttpException(
@@ -30,15 +39,43 @@ export class AiService {
         );
       }
 
+      // 3) Inferir regras de tempo (hora, turno, duração)
+      const infoTempoGlobal = this.inferirTempo(texto);
+
+      // 4) Criar no banco
       const tarefasAdicionadas: any[] = [];
       for (const tarefa of tarefas) {
+        const start = new Date(tarefa.date);
+        let end: Date | null = null;
+        let allDay = false;
+        let durationMinutes: number | null = null;
+
+        if (infoTempoGlobal.allDay) {
+          allDay = true;
+        } else if (infoTempoGlobal.horaInicio) {
+          // se houver duração, calcula fim
+          if (infoTempoGlobal.duracaoMinutos) {
+            durationMinutes = infoTempoGlobal.duracaoMinutos;
+            const horaFimStr = this.somarDuracao(
+              infoTempoGlobal.horaInicio,
+              infoTempoGlobal.duracaoMinutos,
+            );
+            const [hFim, mFim] = horaFimStr.split(':').map(Number);
+            end = new Date(start);
+            end.setHours(hFim, mFim, 0, 0);
+          }
+        }
+
         const task = await this.prisma.task.create({
           data: {
             title: this.capitalizarPrimeira(tarefa.title),
             description: tarefa.description || '',
-            date: new Date(tarefa.date),
+            date: start,          // início
+            endDate: end,         // fim (se houver)
+            allDay,               // dia todo
+            durationMinutes,      // duração em minutos
             done: false,
-            userId: userId,
+            userId,
           },
         });
         tarefasAdicionadas.push(task);
@@ -64,80 +101,178 @@ export class AiService {
     }
   }
 
+  // FLUXO IA
+
   private async processarTextoComIA(texto: string): Promise<string> {
     try {
-      const prompt = `Você é um assistente de produtividade. O usuário escreveu as seguintes atividades ou tarefas:
-"${texto}"
-
-Por favor:
-1. Melhore o texto, corrigindo erros gramaticais e ortográficos
-2. Se houver múltiplas tarefas separadas por horários (ex: "às 10h reunião, às 14h almoço"), mantenha cada uma em uma linha separada
-3. Para cada tarefa, crie um título claro e conciso (máximo 10 palavras)
-4. Adicione uma breve descrição se necessário
-5. Preserve os horários se existirem no formato "HH:MM"
-
-Formato esperado de resposta (uma tarefa por linha):
-HH:MM título da tarefa
-ou
-título da tarefa
-
-Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`;
-
-      const response = await this.huggingfaceClient.generateText(prompt);
+      const response = await this.huggingfaceClient.processTextToTasks(texto);
       return response.trim();
     } catch (error: any) {
       console.error('❌ Erro ao processar texto com HuggingFace:', error);
-      // Fallback para processamento local
       return this.simpleEnhanceText(texto);
     }
   }
 
-  private extractTasksFromText(texto: string): ParsedTask[] {
+  /**
+   * Usa o texto da IA + texto original para montar ParsedTask com data/hora.
+   */
+  private extractTasksFromText(
+    textoIA: string,
+    textoOriginalUsuario: string,
+  ): ParsedTask[] {
     const tarefas: ParsedTask[] = [];
-    const linhas = texto.split('\n').filter((l) => l.trim().length > 0);
+    const linhasIA = textoIA.split('\n').filter((l) => l.trim().length > 0);
 
-    for (const linha of linhas) {
-      // Padrão para detectar horários: "HH:MM" ou "H:MM"
+    // limitar para não criar mais tarefas do que o usuário escreveu
+    const linhasUsuario = textoOriginalUsuario
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    const qtdEsperada = linhasUsuario.length || 1;
+    const linhasLimitadas = linhasIA.slice(0, qtdEsperada);
+
+    const infoTempoGlobal = this.inferirTempo(textoOriginalUsuario);
+    const agora = new Date();
+
+    for (const linha of linhasLimitadas) {
       const timePattern = /^(\d{1,2}):(\d{2})\s+(.+)$/;
       const match = linha.match(timePattern);
 
-      if (match) {
-        const [, horas, minutos, titulo] = match;
-        const agora = new Date();
-        const data = new Date(
-          agora.getFullYear(),
-          agora.getMonth(),
-          agora.getDate(),
-        );
-        data.setHours(parseInt(horas), parseInt(minutos), 0);
+      let data = new Date(
+        agora.getFullYear(),
+        agora.getMonth(),
+        agora.getDate(),
+      );
+      let titulo = linha.trim();
 
-        tarefas.push({
-          title: titulo.trim(),
-          date: data.toISOString(),
-          description: '',
-        });
-      } else if (linha.trim().length > 0) {
-        // Se não tiver horário, adiciona com a data/hora atual
-        tarefas.push({
-          title: linha.trim(),
-          date: new Date().toISOString(),
-          description: '',
-        });
+      if (match) {
+        const [, horas, minutos, tituloIA] = match;
+        data.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+        titulo = tituloIA.trim();
+      } else {
+        // Sem horário na linha da IA -> usar regras de turno/dia-todo
+        if (infoTempoGlobal.allDay) {
+          data.setHours(0, 0, 0, 0); // dia todo, hora zerada
+        } else if (infoTempoGlobal.horaInicio) {
+          const [h, m] = infoTempoGlobal.horaInicio.split(':').map(Number);
+          data.setHours(h, m, 0, 0);
+        }
       }
+
+      tarefas.push({
+        title: titulo,
+        date: data.toISOString(),
+        description: '',
+      });
     }
 
     return tarefas.length > 0 ? tarefas : [];
   }
 
+  // HELPERS DE TEMPO
+
+  // extrai duração em minutos, ex.: "por 2 horas" -> 120
+  private parseDuracaoHoras(texto: string): number | null {
+    const t = texto.toLowerCase();
+
+    // "por 2 horas", "2 horas", "2h"
+    const regexNum = /(?:por\s+)?(\d+)\s*(h|hora|horas)\b/;
+    const match = t.match(regexNum);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > 0) {
+        return num * 60; // minutos
+      }
+    }
+
+    return null;
+  }
+
+  // soma duração a um horário HH:MM e devolve HH:MM do fim
+  private somarDuracao(horaInicio: string, duracaoMinutos: number): string {
+    const [hh, mm] = horaInicio.split(':').map(Number);
+    const totalMin = hh * 60 + mm + duracaoMinutos;
+    const fimMin = ((totalMin % (24 * 60)) + (24 * 60)) % (24 * 60);
+    const h = Math.floor(fimMin / 60);
+    const m = fimMin % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  /**
+   * Inferir horário/turno/dia-todo + duração a partir do texto do usuário.
+   */
+  private inferirTempo(userText: string): InfoTempoTarefa {
+    const texto = userText.toLowerCase();
+
+    const TURNO_MANHA = '08:00';
+    const TURNO_TARDE = '14:00';
+    const TURNO_NOITE = '19:00';
+
+    const duracaoMinutos = this.parseDuracaoHoras(texto) || undefined;
+
+    // 1) Hora explícita (9, 9h, 09:00, 9:30, 9h30, etc.)
+    const regexHora = /\b(\d{1,2})(?::(\d{2}))?\s*(h|horas?)?\b/;
+    const match = texto.match(regexHora);
+
+    if (match) {
+      const hNum = parseInt(match[1], 10);
+      const mNum = match[2] ? parseInt(match[2], 10) : 0;
+
+      const h = String(hNum).padStart(2, '0');
+      const m = String(mNum).padStart(2, '0');
+
+      return {
+        tipo: 'horario',
+        horaInicio: `${h}:${m}`,
+        duracaoMinutos,
+        allDay: !duracaoMinutos,
+      };
+    }
+
+    // 2) Sem hora explícita: procurar turno
+    if (texto.includes('manhã') || texto.includes('manha')) {
+      return {
+        tipo: 'turno',
+        horaInicio: TURNO_MANHA,
+        duracaoMinutos,
+        allDay: !duracaoMinutos,
+      };
+    }
+
+    if (texto.includes('tarde')) {
+      return {
+        tipo: 'turno',
+        horaInicio: TURNO_TARDE,
+        duracaoMinutos,
+        allDay: !duracaoMinutos,
+      };
+    }
+
+    if (texto.includes('noite')) {
+      return {
+        tipo: 'turno',
+        horaInicio: TURNO_NOITE,
+        duracaoMinutos,
+        allDay: !duracaoMinutos,
+      };
+    }
+
+    // 3) Nenhuma hora nem turno -> dia todo
+    return {
+      tipo: 'dia_todo',
+      allDay: true,
+    };
+  }
+
+  // OUTROS HELPERS
+
   private simpleEnhanceText(texto: string): string {
-    // Processamento local simples como fallback
     const melhorado = texto
       .trim()
       .split('\n')
       .map((linha) => linha.trim())
       .filter((linha) => linha.length > 0)
       .map((linha) => {
-        // Capitalizar primeira letra se não começar com número/horário
         if (!/^\d/.test(linha)) {
           return this.capitalizarPrimeira(linha);
         }
@@ -151,14 +286,14 @@ Responda APENAS com as tarefas melhoradas, sem explicações adicionais.`;
   private capitalizarPrimeira(texto: string): string {
     if (!texto || texto.length === 0) return texto;
 
-    // Se começa com horário (HH:MM), pega a parte após o horário
     const timeMatch = texto.match(/^(\d{1,2}:\d{2})\s+(.+)$/);
     if (timeMatch) {
       const [, horario, resto] = timeMatch;
-      return `${horario} ${resto.charAt(0).toUpperCase() + resto.slice(1).toLowerCase()}`;
+      return `${horario} ${
+        resto.charAt(0).toUpperCase() + resto.slice(1).toLowerCase()
+      }`;
     }
 
-    // Caso normal: só capitaliza a primeira letra
     return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
   }
 }

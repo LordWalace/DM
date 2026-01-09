@@ -1,4 +1,3 @@
-// frontend/src/store/authProvider.tsx
 import { useState, useEffect, ReactNode, useContext } from 'react'
 import api from '../services/api'
 import { AuthContext, User } from './authContext'
@@ -54,19 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      const response = await api.post<{ user: User; token: string }>(
+      const response = await api.post<{ accessToken: string; user: User }>(
         '/auth/register',
         { email, password, name },
       )
 
-      const { user, token } = response.data
+      const { user, accessToken } = response.data
 
-      localStorage.setItem('token', token)
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      localStorage.setItem('token', accessToken)
+      api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
       setUser(user)
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Erro ao registrar')
     }
+  }
+
+  const loginWithToken = async (token: string) => {
+    localStorage.setItem('token', token)
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    const response = await api.get<User>('/auth/me')
+    setUser(response.data)
   }
 
   const logout = () => {
@@ -77,7 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, loading, login, register, logout }}
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        register,
+        logout,
+        loginWithToken,
+      }}
     >
       {children}
     </AuthContext.Provider>

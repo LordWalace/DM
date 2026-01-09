@@ -19,6 +19,8 @@ export class AuthService {
     return { accessToken };
   }
 
+  // Cadastro / login normal
+
   async register(dto: CreateUserDto) {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
@@ -49,5 +51,42 @@ export class AuthService {
 
   async validateUser(userId: string): Promise<User | null> {
     return this.usersService.findById(userId);
+  }
+
+  // Login / cadastro via Google
+  // Chamado pela GoogleStrategy.validate()
+
+  async validateGoogleUser(payload: {
+    googleId: string;
+    email: string;
+    name?: string;
+    googleRefreshToken?: string;
+  }) {
+    const { email, name, googleRefreshToken } = payload;
+
+    if (!email) {
+      throw new UnauthorizedException('Conta Google sem email.');
+    }
+
+    let user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      // cria usuário a partir dos dados do Google
+      user = await this.usersService.createFromGoogle({
+        email,
+        name,
+        googleRefreshToken,
+      });
+    } else if (googleRefreshToken) {
+      // opcional: atualizar refresh_token se mudou
+      user = await this.usersService.updateGoogleToken(
+        user.id,
+        googleRefreshToken,
+      );
+    }
+
+    const { accessToken } = this.buildToken(user);
+
+    return { accessToken, user };
   }
 }

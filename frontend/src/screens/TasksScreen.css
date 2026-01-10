@@ -1,3 +1,4 @@
+/* frontend/src/screens/TasksScreen.css */
 .tasks-screen {
   display: flex;
   height: 100vh;
@@ -15,6 +16,9 @@
   --border-color: #e0e0e0;
   --accent-color: #6366f1;
   --accent-hover: #4f46e5;
+  --primary-color: #6366f1;
+  --primary-hover: #4f46e5;
+  --bg-hover: #f0f0f0;
 }
 
 .tasks-screen.dark {
@@ -25,6 +29,9 @@
   --border-color: #333333;
   --accent-color: #818cf8;
   --accent-hover: #a5b4fc;
+  --primary-color: #818cf8;
+  --primary-hover: #a5b4fc;
+  --bg-hover: #2d3748;
 }
 
 .tasks-main {
@@ -199,6 +206,7 @@
   font-weight: 600;
 }
 
+/* ===== TASK ACTIONS ===== */
 .task-actions {
   display: flex;
   gap: 0.75rem;
@@ -206,6 +214,7 @@
 }
 
 .btn-check,
+.btn-edit,
 .btn-delete {
   background: none;
   border: none;
@@ -213,19 +222,52 @@
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-check:hover,
+.btn-edit:hover,
 .btn-delete:hover {
   transform: scale(1.2);
+  background: var(--bg-hover);
 }
 
 .btn-check.checked {
   color: #10b981;
 }
 
+.btn-edit {
+  color: var(--text-secondary);
+}
+
+.btn-edit:hover {
+  color: var(--accent-color);
+}
+
+.btn-delete {
+  color: var(--text-secondary);
+}
+
 .btn-delete:hover {
   color: #ef4444;
+}
+
+/* ===== PROGRESS BAR ===== */
+.task-progress-bar {
+  height: 4px;
+  background-color: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  background-color: var(--accent-color);
+  border-radius: 2px;
+  transition: width 0.5s ease;
 }
 
 /* ===== LOADING & EMPTY STATE ===== */
@@ -306,5 +348,9 @@
 
   .filter-btn {
     white-space: nowrap;
+  }
+
+  .task-actions {
+    gap: 0.5rem;
   }
 }

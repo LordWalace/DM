@@ -1,18 +1,24 @@
+// frontend/src/screens/TasksScreen.tsx
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../store/ThemeContext'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import Card from '../components/Card'
+import TaskModal from '../components/TaskModal'
 import api from '../services/api'
-import { Task } from '../services/types'
+import { Task, CreateTaskDto } from '../services/types'
 import './TasksScreen.css'
 
 const TasksScreen: React.FC = () => {
   const { theme } = useTheme()
+  const navigate = useNavigate()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('Usuário')
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -42,6 +48,30 @@ const TasksScreen: React.FC = () => {
     }
   }
 
+  const handleCreateTask = async (data: CreateTaskDto) => {
+    try {
+      const response = await api.post<Task>('/tasks', data)
+      setTasks((prev) => [...prev, response.data])
+    } catch (error) {
+      console.error('Erro ao criar tarefa:', error)
+      throw error
+    }
+  }
+
+  const handleUpdateTask = async (data: CreateTaskDto) => {
+    if (!editingTask) return
+    try {
+      const response = await api.patch<Task>(`/tasks/${editingTask.id}`, data)
+      setTasks((prev) =>
+        prev.map((t) => (t.id === response.data.id ? response.data : t)),
+      )
+      setEditingTask(null)
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error)
+      throw error
+    }
+  }
+
   const handleCompleteTask = async (taskId: string) => {
     try {
       const current = tasks.find((t) => t.id === taskId)
@@ -61,6 +91,7 @@ const TasksScreen: React.FC = () => {
   }
 
   const handleDeleteTask = async (taskId: string) => {
+    if (!window.confirm('Deseja deletar esta atividade?')) return
     try {
       await api.delete(`/tasks/${taskId}`)
       setTasks((prev) => prev.filter((t) => t.id !== taskId))
@@ -119,6 +150,16 @@ const TasksScreen: React.FC = () => {
     return ((now - start) / (end - start)) * 100
   }
 
+  const openNewTaskModal = () => {
+    setEditingTask(null)
+    setIsModalOpen(true)
+  }
+
+  const openEditTaskModal = (task: Task) => {
+    setEditingTask(task)
+    setIsModalOpen(true)
+  }
+
   return (
     <div className={`tasks-screen ${theme}`}>
       <Sidebar />
@@ -134,13 +175,21 @@ const TasksScreen: React.FC = () => {
           </section>
 
           <section className="action-buttons">
-            <button className="btn btn-primary" title="Nova atividade">
+            <button
+              className="btn btn-primary"
+              title="Nova atividade"
+              onClick={openNewTaskModal}
+            >
               ➕ Nova atividade
             </button>
             <button className="btn btn-secondary" title="Falar">
               🎤 Falar
             </button>
-            <button className="btn btn-secondary" title="IA">
+            <button
+              className="btn btn-secondary"
+              title="IA"
+              onClick={() => navigate('/ai')}
+            >
               🧠 IA
             </button>
           </section>
@@ -176,7 +225,10 @@ const TasksScreen: React.FC = () => {
             ) : sortedTasks.length === 0 ? (
               <div className="empty-state">
                 <p>📭 Nenhuma tarefa {filter !== 'all' ? `${filter}` : ''}.</p>
-                <button className="btn btn-primary">
+                <button
+                  className="btn btn-primary"
+                  onClick={openNewTaskModal}
+                >
                   Criar primeira atividade
                 </button>
               </div>
@@ -227,6 +279,13 @@ const TasksScreen: React.FC = () => {
                         {task.done ? '✅' : '☐'}
                       </button>
                       <button
+                        className="btn-edit"
+                        onClick={() => openEditTaskModal(task)}
+                        title="Editar atividade"
+                      >
+                        ✏️
+                      </button>
+                      <button
                         className="btn-delete"
                         onClick={() => handleDeleteTask(task.id)}
                         title="Deletar atividade"
@@ -241,6 +300,17 @@ const TasksScreen: React.FC = () => {
           </section>
         </div>
       </div>
+
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingTask(null)
+        }}
+        onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
+        task={editingTask}
+        isEditMode={!!editingTask}
+      />
     </div>
   )
 }
